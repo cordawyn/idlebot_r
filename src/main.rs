@@ -1,4 +1,3 @@
-// use std::env;
 use std::fs::File;
 use std::io::Read;
 
@@ -19,15 +18,11 @@ impl EventHandler for Handler {
     //
     // Event handlers are dispatched through a threadpool, and so multiple
     // events can be dispatched simultaneously.
-    async fn message(&self, ctx: Context, msg: Message) {
-        if msg.content == "!ping" {
-            // Sending a message can fail, due to a network error, an
-            // authentication error, or lack of permissions to post in the
-            // channel, so log to stdout when some error happens, with a
-            // description of it.
-            if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!").await {
-                println!("Error sending message: {:?}", why);
-            }
+    async fn message(&self, _ctx: Context, msg: Message) {
+        // TODO
+        if !msg.author.bot {
+            println!("Author Id: {:?}", msg.author.id);
+            println!("Timestamp: {:?}", msg.timestamp);
         }
     }
 
@@ -42,26 +37,27 @@ impl EventHandler for Handler {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    #[derive(Deserialize)]
-    struct Config {
-        #[serde(rename = "DISCORD_TOKEN")]
-        discord_token: String
-    }
+#[derive(Deserialize)]
+struct Config {
+    #[serde(rename = "DISCORD_TOKEN")]
+    discord_token: String
+}
 
+fn configure() -> Config {
     // Configure the client with your Discord bot token in the environment.
     let mut file = File::open("Secrets.toml").unwrap();
     let mut config = String::new();
     file.read_to_string(&mut config).unwrap();
-    let config: Config = from_str(&config).unwrap();
-    let token = config.discord_token;
-    //// let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    return from_str(&config).unwrap();
+}
+
+#[tokio::main]
+async fn main() {
+    let token = configure().discord_token;
 
     // Set gateway intents, which decides what events the bot will be notified about
     let intents = GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::DIRECT_MESSAGES
-        | GatewayIntents::MESSAGE_CONTENT;
+        | GatewayIntents::DIRECT_MESSAGES;
 
     // Create a new instance of the Client, logging in as a bot. This will
     // automatically prepend your bot token with "Bot ", which is a requirement
