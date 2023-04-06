@@ -1,5 +1,6 @@
 mod commands;
 
+use std::env;
 use std::fs::File;
 use std::io::Read;
 
@@ -8,6 +9,7 @@ use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::model::application::command::Command;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
+use serenity::model::id::GuildId;
 use serenity::prelude::*;
 
 use toml::from_str;
@@ -77,7 +79,27 @@ impl EventHandler for Handler {
     //
     // In this case, just print what the current user's username is.
     async fn ready(&self, _: Context, ready: Ready) {
-        // TODO: Register slash commands
+        // Register slash commands
+
+        // FIXME: Temporarily, register as a guild command, then make it "global" (see below)
+        let guild_id = GuildId(
+            env::var("GUILD_ID")
+                .expect("Expected GUILD_ID in environment")
+                .parse()
+                .expect("GUILD_ID must be an integer"),
+        );
+
+        let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
+            commands
+                .create_application_command(|command| commands::idle::register(command))
+        })
+        .await;
+
+        // TODO: "Convert" guild commands above into global commands when done testing
+        // let guild_command = Command::create_global_application_command(&ctx.http, |command| {
+        //     commands::wonderful_command::register(command)
+        // })
+        // .await;
 
         println!("{} is connected!", ready.user.name);
     }
