@@ -7,15 +7,12 @@ use std::io::Read;
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
-use serenity::model::application::command::Command;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::id::GuildId;
 use serenity::prelude::*;
 
 use toml::from_str;
 use serde::Deserialize;
-
-use sled;
 
 struct Handler;
 
@@ -30,13 +27,14 @@ impl EventHandler for Handler {
         if !msg.author.bot {
             // GuildId is None when we're dealing with a private message
             if let Some(gid) = msg.guild_id {
+                println!("Guild id: {}", gid);
                 let mut data = ctx.data.write().await;
                 let db = data.get_mut::<DatabaseConnection>().unwrap();
                 if let Ok(tree) = db.open_tree(gid.to_string()) {
                     // TODO: use serde?
-                    let aid = msg.author.id.to_string();
-                    let ts = msg.timestamp.to_string();
-                    tree.insert(aid.as_bytes(), ts.as_bytes()).expect("ERROR: Could not insert data!");
+                    let aid = msg.author.id.as_u64();
+                    let ts = msg.timestamp.unix_timestamp();
+                    tree.insert(aid.to_be_bytes(), &ts.to_be_bytes()).expect("ERROR: Could not insert data!");
                 }
                 // TODO: Also store AuthorId -> Author Nickname reference
                 // to avoid looking it up when responding with a list of "idle users".
@@ -54,8 +52,13 @@ impl EventHandler for Handler {
         if let Interaction::ApplicationCommand(command) = interaction {
             println!("Received command interaction: {:#?}", command);
 
-            let content = match command.data.name.as_str() {
-                "idle" => commands::idle::run(&command.data.options),
+        let gid = command.data.guild_id.expect("No guild id somehow.");
+
+        let mut data = ctx.data.write().await;
+        let db = data.get_mut::<DatabaseConnection>().unwrap();
+
+        let content = match command.data.name.as_str() {
+                "idle" => commands::idle::run(&command.data.options, db, &gid),
                 _ => "not implemented :(".to_string(),
             };
 
@@ -78,7 +81,7 @@ impl EventHandler for Handler {
     // private channels, and more.
     //
     // In this case, just print what the current user's username is.
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
         // Register slash commands
 
         // FIXME: Temporarily, register as a guild command, then make it "global" (see below)
@@ -89,7 +92,7 @@ impl EventHandler for Handler {
                 .expect("GUILD_ID must be an integer"),
         );
 
-        let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
+        let _commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
             commands
                 .create_application_command(|command| commands::idle::register(command))
         })
