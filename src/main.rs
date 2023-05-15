@@ -52,12 +52,12 @@ impl EventHandler for Handler {
         if let Interaction::ApplicationCommand(command) = interaction {
             println!("Received command interaction: {:#?}", command);
 
-        let gid = command.data.guild_id.expect("No guild id somehow.");
+            let gid = command.data.guild_id.expect("No guild id somehow.");
 
-        let mut data = ctx.data.write().await;
-        let db = data.get_mut::<DatabaseConnection>().unwrap();
+            let mut data = ctx.data.write().await;
+            let db = data.get_mut::<DatabaseConnection>().unwrap();
 
-        let content = match command.data.name.as_str() {
+            let content = match command.data.name.as_str() {
                 "idle" => commands::idle::run(&command.data.options, db, &gid),
                 _ => "not implemented :(".to_string(),
             };
