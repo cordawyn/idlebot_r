@@ -11,3 +11,4 @@ tokio = { version = "1.21.2", features = ["macros", "rt-multi-thread"] }
 serde = "1.0.152"
 toml = "0.7.2"
 sled = "0.34.7"
+human-repr = "1.1.0"
