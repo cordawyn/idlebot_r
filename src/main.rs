@@ -30,14 +30,18 @@ impl EventHandler for Handler {
                 println!("Guild id: {}", gid);
                 let mut data = ctx.data.write().await;
                 let db = data.get_mut::<DatabaseConnection>().unwrap();
-                if let Ok(tree) = db.open_tree(gid.to_string()) {
-                    // TODO: use serde?
+                if let Ok(timestamps) = db.open_tree(gid.to_string()) {
                     let aid = msg.author.id.as_u64();
                     let ts = msg.timestamp.unix_timestamp();
-                    tree.insert(aid.to_be_bytes(), &ts.to_be_bytes()).expect("ERROR: Could not insert data!");
+                    timestamps.insert(aid.to_be_bytes(), &ts.to_be_bytes()).expect("ERROR: Could not insert timestamp data!");
                 }
-                // TODO: Also store AuthorId -> Author Nickname reference
+                // Store AuthorId -> Author Nickname reference
                 // to avoid looking it up when responding with a list of "idle users".
+                if let Ok(authors) = db.open_tree("authors") {
+                    let aid = msg.author.id.as_u64();
+                    let aname = msg.author.name;
+                    authors.insert(aid.to_be_bytes(), aname.as_bytes()).expect("ERROR: Could not insert user data!");
+                }
             }
         }
     }
