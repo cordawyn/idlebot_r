@@ -27,7 +27,6 @@ impl EventHandler for Handler {
         if !msg.author.bot {
             // GuildId is None when we're dealing with a private message
             if let Some(gid) = msg.guild_id {
-                println!("Guild id: {}", gid);
                 let mut data = ctx.data.write().await;
                 let db = data.get_mut::<DatabaseConnection>().unwrap();
                 if let Ok(timestamps) = db.open_tree(gid.to_string()) {
@@ -54,8 +53,6 @@ impl EventHandler for Handler {
     // All commands MUST be scoped to the current guild (hopefully, its id is sent with the slash command).
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
-            println!("Received command interaction: {:#?}", command);
-
             let gid = command.data.guild_id.expect("No guild id somehow.");
 
             let mut data = ctx.data.write().await;
